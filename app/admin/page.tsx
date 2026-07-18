@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
+import { Tweet } from "@/lib/types";
 
 export default function AdminPage() {
   const router = useRouter();
@@ -13,6 +14,7 @@ export default function AdminPage() {
   const [authError, setAuthError] = useState("");
 
   // Form state
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [tweetUrl, setTweetUrl] = useState("");
   const [authorName, setAuthorName] = useState("");
   const [authorHandle, setAuthorHandle] = useState("");
@@ -21,13 +23,34 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
-  // Check if already authenticated (from localStorage)
+  // Tweets list state
+  const [tweets, setTweets] = useState<Tweet[]>([]);
+  const [loadingTweets, setLoadingTweets] = useState(false);
+
+  // Fetch all tweets
+  const fetchTweets = useCallback(async () => {
+    setLoadingTweets(true);
+    const { data, error } = await supabase
+      .from("tweets")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Error fetching tweets:", error);
+    } else {
+      setTweets(data || []);
+    }
+    setLoadingTweets(false);
+  }, []);
+
+  // Check auth on load
   useEffect(() => {
     const savedAuth = localStorage.getItem("curatedx_admin_auth");
     if (savedAuth === "true") {
       setIsAuthenticated(true);
+      fetchTweets();
     }
-  }, []);
+  }, [fetchTweets]);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,6 +61,7 @@ export default function AdminPage() {
     if (passwordInput === correctPassword) {
       setIsAuthenticated(true);
       localStorage.setItem("curatedx_admin_auth", "true");
+      fetchTweets();
     } else {
       setAuthError("❌ Incorrect password");
       setPasswordInput("");
@@ -85,29 +109,93 @@ export default function AdminPage() {
     }
   };
 
+  const handleEdit = (tweet: Tweet) => {
+    setEditingId(tweet.id);
+    setTweetUrl(tweet.tweet_url);
+    setAuthorName(tweet.author_name);
+    setAuthorHandle(tweet.author_handle);
+    setContent(tweet.content);
+    setCategory(tweet.category);
+    setMessage("✏️ Editing tweet. Click 'Update Tweet' to save changes.");
+    
+    // Scroll to top
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setTweetUrl("");
+    setAuthorName("");
+    setAuthorHandle("");
+    setContent("");
+    setCategory("Business");
+    setMessage("");
+  };
+
+  const handleDelete = async (tweetId: string) => {
+    if (!confirm("Are you sure you want to delete this tweet? This cannot be undone.")) {
+      return;
+    }
+
+    const { error } = await supabase.from("tweets").delete().eq("id", tweetId);
+
+    if (error) {
+      alert("Error deleting tweet: " + error.message);
+      return;
+    }
+
+    setMessage("🗑️ Tweet deleted!");
+    fetchTweets();
+    router.refresh();
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setMessage("");
 
-    const { error } = await supabase.from("tweets").insert({
-      tweet_url: tweetUrl,
-      author_name: authorName,
-      author_handle: authorHandle,
-      content: content,
-      category: category,
-      is_published: true,
-    });
+    if (editingId) {
+      // UPDATE existing tweet
+      const { error } = await supabase
+        .from("tweets")
+        .update({
+          tweet_url: tweetUrl,
+          author_name: authorName,
+          author_handle: authorHandle,
+          content: content,
+          category: category,
+        })
+        .eq("id", editingId);
 
-    if (error) {
-      console.error("Error saving tweet:", error);
-      setMessage("❌ Error: " + error.message);
-      setLoading(false);
-      return;
+      if (error) {
+        setMessage("❌ Error: " + error.message);
+        setLoading(false);
+        return;
+      }
+
+      setMessage("✅ Tweet updated successfully!");
+      setEditingId(null);
+    } else {
+      // INSERT new tweet
+      const { error } = await supabase.from("tweets").insert({
+        tweet_url: tweetUrl,
+        author_name: authorName,
+        author_handle: authorHandle,
+        content: content,
+        category: category,
+        is_published: true,
+      });
+
+      if (error) {
+        setMessage("❌ Error: " + error.message);
+        setLoading(false);
+        return;
+      }
+
+      setMessage("✅ Tweet added successfully!");
     }
 
-    setMessage("✅ Tweet added successfully!");
-
+    // Clear form
     setTweetUrl("");
     setAuthorName("");
     setAuthorHandle("");
@@ -115,6 +203,7 @@ export default function AdminPage() {
     setCategory("Business");
 
     setLoading(false);
+    fetchTweets();
     router.refresh();
   };
 
@@ -164,7 +253,7 @@ export default function AdminPage() {
     );
   }
 
-  // 🎯 ADMIN PANEL (only shown when authenticated)
+  // 🎯 ADMIN PANEL
   return (
     <main className="min-h-dvh px-4 py-6">
       <div className="mx-auto w-full max-w-md">
@@ -185,10 +274,14 @@ export default function AdminPage() {
         {/* TITLE */}
         <section className="mt-10">
           <h1 className="text-3xl font-extrabold leading-tight tracking-tighter">
-            Add a <span className="text-amber-400">Goldmine</span> Tweet
+            {editingId ? (
+              <>Edit <span className="text-amber-400">Tweet</span></>
+            ) : (
+              <>Add a <span className="text-amber-400">Goldmine</span> Tweet</>
+            )}
           </h1>
           <p className="mt-3 text-sm text-zinc-500">
-            Paste a tweet URL and we&apos;ll auto-fetch the details.
+            {editingId ? "Update the tweet details below." : "Paste a tweet URL and we'll auto-fetch the details."}
           </p>
         </section>
 
@@ -209,14 +302,16 @@ export default function AdminPage() {
               className="mt-2 w-full rounded-xl border border-zinc-800 bg-zinc-900/50 px-4 py-3 text-sm text-zinc-200 placeholder:text-zinc-600 focus:border-amber-400 focus:outline-none"
             />
 
-            <button
-              type="button"
-              onClick={handleFetchTweet}
-              disabled={loading}
-              className="mt-3 w-full rounded-xl border border-amber-400 text-amber-400 hover:bg-amber-400 hover:text-black font-bold py-3 text-xs uppercase tracking-widest transition-colors disabled:opacity-50"
-            >
-              {loading ? "Fetching..." : "Fetch Tweet Data"}
-            </button>
+            {!editingId && (
+              <button
+                type="button"
+                onClick={handleFetchTweet}
+                disabled={loading}
+                className="mt-3 w-full rounded-xl border border-amber-400 text-amber-400 hover:bg-amber-400 hover:text-black font-bold py-3 text-xs uppercase tracking-widest transition-colors disabled:opacity-50"
+              >
+                {loading ? "Fetching..." : "Fetch Tweet Data"}
+              </button>
+            )}
           </div>
 
           {/* Author Name */}
@@ -279,19 +374,29 @@ export default function AdminPage() {
               <option value="Tech">Tech</option>
               <option value="Growth">Growth</option>
               <option value="Marketing">Marketing</option>
-              <option value="Sports">Sports</option>
-              <option value="Finance">Finance</option>
             </select>
           </div>
 
-          {/* Submit Button */}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-xl bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-black font-bold py-4 text-sm uppercase tracking-widest transition-colors"
-          >
-            {loading ? "Saving..." : "Add Tweet"}
-          </button>
+          {/* Submit + Cancel Buttons */}
+          <div className="flex gap-3">
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex-1 rounded-xl bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-black font-bold py-4 text-sm uppercase tracking-widest transition-colors"
+            >
+              {loading ? "Saving..." : editingId ? "Update Tweet" : "Add Tweet"}
+            </button>
+
+            {editingId && (
+              <button
+                type="button"
+                onClick={handleCancelEdit}
+                className="rounded-xl border border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500 font-bold px-6 py-4 text-sm uppercase tracking-widest transition-colors"
+              >
+                Cancel
+              </button>
+            )}
+          </div>
 
           {/* Message */}
           {message && (
@@ -300,6 +405,66 @@ export default function AdminPage() {
             </div>
           )}
         </form>
+
+        {/* MANAGE TWEETS SECTION */}
+        <section className="mt-16">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xs font-black text-zinc-500 uppercase tracking-[0.2em]">
+              Manage Tweets ({tweets.length})
+            </h2>
+            <div className="h-[1px] flex-1 bg-zinc-900 ml-4"></div>
+          </div>
+
+          {loadingTweets ? (
+            <div className="text-center py-8 text-zinc-500 text-sm">
+              Loading tweets...
+            </div>
+          ) : tweets.length === 0 ? (
+            <div className="text-center py-8 text-zinc-500 text-sm">
+              No tweets yet. Add your first one above!
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {tweets.map((tweet) => (
+                <div
+                  key={tweet.id}
+                  className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-4"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-xs font-semibold text-zinc-200">
+                          {tweet.author_name}
+                        </span>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400 uppercase tracking-wider">
+                          {tweet.category}
+                        </span>
+                      </div>
+                      <p className="text-xs text-zinc-400 line-clamp-2">
+                        {tweet.content}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 flex items-center gap-3 pt-3 border-t border-zinc-800/50">
+                    <button
+                      onClick={() => handleEdit(tweet)}
+                      className="text-xs font-bold text-amber-400 hover:text-amber-300 transition-colors"
+                    >
+                      EDIT
+                    </button>
+                    <button
+                      onClick={() => handleDelete(tweet.id)}
+                      className="text-xs font-bold text-red-400 hover:text-red-300 transition-colors"
+                    >
+                      DELETE
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
 
       </div>
     </main>
