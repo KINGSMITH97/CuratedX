@@ -30,7 +30,7 @@ const MOCK_TWEETS = [
 
 export default function Home() {
   return (
-    <main className="min-h-dvh px-4 py-6 font-sans">
+    <main className="min-h-dvh px-4 py-6">
       <div className="mx-auto w-full max-w-md">
         
         {/* HEADER */}
