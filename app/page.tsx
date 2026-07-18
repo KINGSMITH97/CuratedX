@@ -1,65 +1,99 @@
-import Image from "next/image";
+import TweetCard from "@/components/TweetCard";
+
+// THIS IS OUR MOCK DATA (Our temporary database)
+const MOCK_TWEETS = [
+  {
+    id: 1,
+    authorName: "Naval",
+    handle: "naval",
+    category: "Mindset",
+    content: "Productivity is for the middle-class. High-output individuals focus on leverage, judgment, and accountability.",
+    url: "https://x.com/naval"
+  },
+  {
+    id: 2,
+    authorName: "Alex Hormozi",
+    handle: "AlexHormozi",
+    category: "Business",
+    content: "You don’t become confident by shouting affirmations in the mirror. You become confident by having a stack of undeniable proof that you are who you say you are. Outwork your self-doubt.",
+    url: "https://x.com/AlexHormozi"
+  },
+  {
+    id: 3,
+    authorName: "Paul Graham",
+    handle: "paulg",
+    category: "Tech",
+    content: "It’s better to have 100 people who love you than 1 million people who sort of like you. Build deep, not wide.",
+    url: "https://x.com/paulg"
+  }
+];
 
 export default function Home() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <main className="min-h-dvh px-4 py-6 font-sans">
+      <div className="mx-auto w-full max-w-md">
+        
+        {/* HEADER */}
+        <header className="flex items-center justify-between">
+          <div className="text-xl font-black tracking-tighter italic">
+            CURATED<span className="text-amber-400 text-2xl not-italic">X</span>
+          </div>
+
+          <button className="rounded-full border border-zinc-800 bg-zinc-900/50 px-4 py-1.5 text-xs font-bold text-zinc-400 uppercase tracking-widest">
+            Admin
+          </button>
+        </header>
+
+        {/* HERO */}
+        <section className="mt-10">
+          <h1 className="text-4xl font-extrabold leading-[0.9] tracking-tighter">
+            FIND <span className="text-amber-400">GOLDMINE</span> <br/> TWEETS, FAST.
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p className="mt-4 text-sm text-zinc-500 font-medium leading-relaxed">
+            The private library of high-signal content. <br/> Filtered for builders and thinkers.
           </p>
+        </section>
+
+        {/* SEARCH BOX */}
+        <div className="mt-8 relative group">
+          <div className="absolute -inset-0.5 bg-amber-400/20 rounded-xl blur opacity-0 group-focus-within:opacity-100 transition duration-500"></div>
+          <input
+            placeholder="Search gems..."
+            className="relative w-full rounded-xl border border-zinc-800 bg-black px-4 py-4 text-sm text-zinc-300 placeholder:text-zinc-600 focus:border-amber-400 focus:outline-none transition-all"
+          />
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+
+        {/* LATEST GEMS LIST */}
+        <section className="mt-12">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xs font-black text-zinc-500 uppercase tracking-[0.2em]">
+              Latest Discoveries
+            </h2>
+            <div className="h-[1px] flex-1 bg-zinc-900 ml-4"></div>
+          </div>
+
+          <div className="space-y-6">
+            {MOCK_TWEETS.map((tweet) => (
+              <TweetCard 
+                key={tweet.id}
+                authorName={tweet.authorName}
+                handle={tweet.handle}
+                content={tweet.content}
+                url={tweet.url}
+                category={tweet.category}
+              />
+            ))}
+          </div>
+        </section>
+
+        {/* FOOTER */}
+        <footer className="mt-20 border-t border-zinc-900 pt-10 pb-10 text-center">
+          <p className="text-[10px] font-bold text-zinc-600 uppercase tracking-[0.3em]">
+            Curated<span className="text-amber-400">X</span> 
+          </p>
+        </footer>
+
+      </div>
+    </main>
   );
 }
