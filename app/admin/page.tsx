@@ -14,6 +14,41 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
+  const handleFetchTweet = async () => {
+    if (!tweetUrl) {
+      setMessage("⚠️ Please enter a tweet URL first.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setMessage("Fetching tweet data...");
+
+      const response = await fetch(
+        `/api/fetch-tweet?url=${encodeURIComponent(tweetUrl)}`
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setMessage("❌ " + data.error);
+        setLoading(false);
+        return;
+      }
+
+      setAuthorName(data.author_name);
+      setAuthorHandle(data.author_handle);
+      setContent(data.content);
+
+      setMessage("✅ Tweet data fetched successfully!");
+    } catch (error) {
+      console.error(error);
+      setMessage("❌ Failed to fetch tweet.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -36,14 +71,13 @@ export default function AdminPage() {
     }
 
     setMessage("✅ Tweet added successfully!");
-    
-    // Clear the form
+
     setTweetUrl("");
     setAuthorName("");
     setAuthorHandle("");
     setContent("");
     setCategory("Business");
-    
+
     setLoading(false);
     router.refresh();
   };
@@ -51,7 +85,7 @@ export default function AdminPage() {
   return (
     <main className="min-h-dvh px-4 py-6">
       <div className="mx-auto w-full max-w-md">
-        
+
         {/* HEADER */}
         <header className="flex items-center justify-between">
           <a href="/" className="text-xl font-black tracking-tighter italic">
@@ -68,13 +102,13 @@ export default function AdminPage() {
             Add a <span className="text-amber-400">Goldmine</span> Tweet
           </h1>
           <p className="mt-3 text-sm text-zinc-500">
-            Paste a tweet URL and fill in the details.
+            Paste a tweet URL and we&apos;ll auto-fetch the details.
           </p>
         </section>
 
         {/* FORM */}
         <form onSubmit={handleSubmit} className="mt-8 space-y-5">
-          
+
           {/* Tweet URL */}
           <div>
             <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
@@ -88,6 +122,15 @@ export default function AdminPage() {
               placeholder="https://x.com/username/status/..."
               className="mt-2 w-full rounded-xl border border-zinc-800 bg-zinc-900/50 px-4 py-3 text-sm text-zinc-200 placeholder:text-zinc-600 focus:border-amber-400 focus:outline-none"
             />
+
+            <button
+              type="button"
+              onClick={handleFetchTweet}
+              disabled={loading}
+              className="mt-3 w-full rounded-xl border border-amber-400 text-amber-400 hover:bg-amber-400 hover:text-black font-bold py-3 text-xs uppercase tracking-widest transition-colors disabled:opacity-50"
+            >
+              {loading ? "Fetching..." : "Fetch Tweet Data"}
+            </button>
           </div>
 
           {/* Author Name */}
@@ -130,7 +173,7 @@ export default function AdminPage() {
               value={content}
               onChange={(e) => setContent(e.target.value)}
               placeholder="The tweet text goes here..."
-              rows={4}
+              rows={5}
               className="mt-2 w-full rounded-xl border border-zinc-800 bg-zinc-900/50 px-4 py-3 text-sm text-zinc-200 placeholder:text-zinc-600 focus:border-amber-400 focus:outline-none resize-none"
             />
           </div>
@@ -150,6 +193,7 @@ export default function AdminPage() {
               <option value="Tech">Tech</option>
               <option value="Growth">Growth</option>
               <option value="Marketing">Marketing</option>
+              <option value="Sports">Sports</option>
             </select>
           </div>
 
