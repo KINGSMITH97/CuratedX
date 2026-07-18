@@ -1,6 +1,9 @@
+
 import TweetCard from "@/components/TweetCard";
 import { supabase } from "@/lib/supabase";
 import { Tweet } from "@/lib/types";
+
+export const revalidate = 0;
 
 // Fetch tweets from Supabase
 async function getTweets(): Promise<Tweet[]> {
