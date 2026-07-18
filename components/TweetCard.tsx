@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { toPng } from "html-to-image";
-import ShareableImage from "./ShareableImage";
+import { useState } from "react";
+import ShareModal from "./ShareModal";
 
 interface TweetCardProps {
   authorName: string;
@@ -14,8 +13,7 @@ interface TweetCardProps {
 
 export default function TweetCard({ authorName, handle, content, url, category }: TweetCardProps) {
   const [copied, setCopied] = useState(false);
-  const [generatingImage, setGeneratingImage] = useState(false);
-  const shareableRef = useRef<HTMLDivElement>(null);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
 
   const handleCopy = async () => {
     const textToCopy = `"${content}"\n\n— @${handle}\n\n${url}`;
@@ -31,30 +29,6 @@ export default function TweetCard({ authorName, handle, content, url, category }
   const handleWhatsAppShare = () => {
     const text = `"${content}"\n\n— @${handle}\n\nSource: ${url}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
-  };
-
-  const handleShareImage = async () => {
-    if (!shareableRef.current) return;
-
-    setGeneratingImage(true);
-
-    try {
-      const dataUrl = await toPng(shareableRef.current, {
-        quality: 1,
-        pixelRatio: 2,
-      });
-
-      // Create download link
-      const link = document.createElement("a");
-      link.download = `curatedx-${handle}-${Date.now()}.png`;
-      link.href = dataUrl;
-      link.click();
-    } catch (err) {
-      console.error("Failed to generate image:", err);
-      alert("Failed to generate image. Please try again.");
-    } finally {
-      setGeneratingImage(false);
-    }
   };
 
   return (
@@ -114,25 +88,24 @@ export default function TweetCard({ authorName, handle, content, url, category }
 
           <button
             type="button"
-            onClick={handleShareImage}
-            disabled={generatingImage}
-            className="text-zinc-500 hover:text-amber-400 text-xs font-bold transition-colors disabled:opacity-50"
+            onClick={() => setShareModalOpen(true)}
+            className="text-zinc-500 hover:text-amber-400 text-xs font-bold transition-colors"
           >
-            {generatingImage ? "GENERATING..." : "📸 IMAGE"}
+            📸 IMAGE
           </button>
         </div>
       </article>
 
-      {/* Hidden shareable image (positioned off-screen) */}
-      <div style={{ position: "fixed", top: "-9999px", left: "-9999px", pointerEvents: "none" }}>
-        <ShareableImage
-          ref={shareableRef}
-          content={content}
-          authorName={authorName}
-          handle={handle}
-          category={category}
-        />
-      </div>
+      {/* Share Modal */}
+      <ShareModal
+        isOpen={shareModalOpen}
+        onClose={() => setShareModalOpen(false)}
+        content={content}
+        authorName={authorName}
+        handle={handle}
+        category={category}
+        url={url}
+      />
     </>
   );
 }
