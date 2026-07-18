@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
+import { toPng } from "html-to-image";
+import ShareableImage from "./ShareableImage";
 
 interface TweetCardProps {
   authorName: string;
@@ -12,15 +14,14 @@ interface TweetCardProps {
 
 export default function TweetCard({ authorName, handle, content, url, category }: TweetCardProps) {
   const [copied, setCopied] = useState(false);
+  const [generatingImage, setGeneratingImage] = useState(false);
+  const shareableRef = useRef<HTMLDivElement>(null);
 
   const handleCopy = async () => {
     const textToCopy = `"${content}"\n\n— @${handle}\n\n${url}`;
-    
     try {
       await navigator.clipboard.writeText(textToCopy);
       setCopied(true);
-      
-      // Reset after 2 seconds
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error("Failed to copy:", err);
@@ -29,66 +30,109 @@ export default function TweetCard({ authorName, handle, content, url, category }
 
   const handleWhatsAppShare = () => {
     const text = `"${content}"\n\n— @${handle}\n\nSource: ${url}`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
+  };
+
+  const handleShareImage = async () => {
+    if (!shareableRef.current) return;
+
+    setGeneratingImage(true);
+
+    try {
+      const dataUrl = await toPng(shareableRef.current, {
+        quality: 1,
+        pixelRatio: 2,
+      });
+
+      // Create download link
+      const link = document.createElement("a");
+      link.download = `curatedx-${handle}-${Date.now()}.png`;
+      link.href = dataUrl;
+      link.click();
+    } catch (err) {
+      console.error("Failed to generate image:", err);
+      alert("Failed to generate image. Please try again.");
+    } finally {
+      setGeneratingImage(false);
+    }
   };
 
   return (
-    <article className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-5 hover:border-amber-400/30 transition-all">
-      
-      {/* HEADER: Author + Category */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-full bg-amber-400/20 flex items-center justify-center text-amber-400 text-xs font-bold border border-amber-400/20">
-            {authorName[0]}
-          </div>
-          <div>
-            <div className="text-sm font-semibold text-zinc-100 leading-none">{authorName}</div>
-            <div className="text-[10px] text-zinc-500 mt-1">@{handle}</div>
-          </div>
-        </div>
-        <span className="text-[10px] font-medium px-2 py-1 rounded-full bg-zinc-800 text-zinc-400 uppercase tracking-wider">
-          {category}
-        </span>
-      </div>
-
-      {/* TWEET CONTENT */}
-      <p className="mt-4 text-sm leading-relaxed text-zinc-200 whitespace-pre-line">
-        {content}
-      </p>
-
-      {/* ACTIONS */}
-      <div className="mt-5 flex items-center gap-4 border-t border-zinc-800/50 pt-4 flex-wrap">
+    <>
+      <article className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-5 hover:border-amber-400/30 transition-all">
         
-        {/* View on X */}
-        <a
-          href={url}
-          target="_blank"
-          rel="noreferrer"
-          className="text-amber-400 hover:text-amber-300 text-xs font-bold transition-colors"
-        >
-          VIEW ON X →
-        </a>
+        {/* HEADER */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="h-8 w-8 rounded-full bg-amber-400/20 flex items-center justify-center text-amber-400 text-xs font-bold border border-amber-400/20">
+              {authorName[0]}
+            </div>
+            <div>
+              <div className="text-sm font-semibold text-zinc-100 leading-none">{authorName}</div>
+              <div className="text-[10px] text-zinc-500 mt-1">@{handle}</div>
+            </div>
+          </div>
+          <span className="text-[10px] font-medium px-2 py-1 rounded-full bg-zinc-800 text-zinc-400 uppercase tracking-wider">
+            {category}
+          </span>
+        </div>
 
-        {/* Share WhatsApp */}
-        <button
-          type="button"
-          onClick={handleWhatsAppShare}
-          className="text-zinc-500 hover:text-emerald-400 text-xs font-bold transition-colors"
-        >
-          WHATSAPP
-        </button>
+        {/* CONTENT */}
+        <p className="mt-4 text-sm leading-relaxed text-zinc-200 whitespace-pre-line">
+          {content}
+        </p>
 
-        {/* Copy to Clipboard */}
-        <button
-          type="button"
-          onClick={handleCopy}
-          className={`text-xs font-bold transition-colors ${
-            copied ? "text-emerald-400" : "text-zinc-500 hover:text-amber-400"
-          }`}
-        >
-          {copied ? "✓ COPIED" : "COPY"}
-        </button>
+        {/* ACTIONS */}
+        <div className="mt-5 flex items-center gap-4 border-t border-zinc-800/50 pt-4 flex-wrap">
+          
+          <a
+            href={url}
+            target="_blank"
+            rel="noreferrer"
+            className="text-amber-400 hover:text-amber-300 text-xs font-bold transition-colors"
+          >
+            VIEW ON X →
+          </a>
+
+          <button
+            type="button"
+            onClick={handleWhatsAppShare}
+            className="text-zinc-500 hover:text-emerald-400 text-xs font-bold transition-colors"
+          >
+            WHATSAPP
+          </button>
+
+          <button
+            type="button"
+            onClick={handleCopy}
+            className={`text-xs font-bold transition-colors ${
+              copied ? "text-emerald-400" : "text-zinc-500 hover:text-amber-400"
+            }`}
+          >
+            {copied ? "✓ COPIED" : "COPY"}
+          </button>
+
+          <button
+            type="button"
+            onClick={handleShareImage}
+            disabled={generatingImage}
+            className="text-zinc-500 hover:text-amber-400 text-xs font-bold transition-colors disabled:opacity-50"
+          >
+            {generatingImage ? "GENERATING..." : "📸 IMAGE"}
+          </button>
+        </div>
+      </article>
+
+      {/* Hidden shareable image (positioned off-screen) */}
+      <div style={{ position: "fixed", top: "-9999px", left: "-9999px", pointerEvents: "none" }}>
+        <ShareableImage
+          ref={shareableRef}
+          content={content}
+          authorName={authorName}
+          handle={handle}
+          category={category}
+        />
       </div>
-    </article>
+    </>
   );
 }
