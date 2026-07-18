@@ -7,6 +7,11 @@ import TemplateMinimal from "./share-templates/TemplateMinimal";
 import TemplateBold from "./share-templates/TemplateBold";
 import TemplateEditorial from "./share-templates/TemplateEditorial";
 
+const isIOS = () => {
+  if (typeof window === "undefined") return false;
+  return /iPad|iPhone|iPod/.test(navigator.userAgent);
+};
+
 interface ShareModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -52,26 +57,52 @@ export default function ShareModal({
   const CurrentTemplate = templates.find((t) => t.id === selectedTemplate)?.component || TemplateClassic;
 
   const handleDownload = async () => {
-    if (!previewRef.current) return;
+  if (!previewRef.current) return;
 
-    setGenerating(true);
-    try {
-      const dataUrl = await toPng(previewRef.current, {
-        quality: 1,
-        pixelRatio: 2,
-      });
+  setGenerating(true);
+  try {
+    const dataUrl = await toPng(previewRef.current, {
+      quality: 1,
+      pixelRatio: 2,
+    });
 
+    // Convert dataUrl to Blob
+    const blob = await (await fetch(dataUrl)).blob();
+    const file = new File([blob], `curatedx-${handle}-${Date.now()}.png`, {
+      type: "image/png",
+    });
+
+    // Detect iOS
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+
+    // Try Web Share API first (works great on iOS)
+    if (isIOS && navigator.share && navigator.canShare?.({ files: [file] })) {
+      try {
+        await navigator.share({
+          files: [file],
+          title: "CuratedX",
+          text: `"${content}" — @${handle}`,
+        });
+      } catch (shareError) {
+        // User cancelled share - not an error
+        if ((shareError as Error).name !== "AbortError") {
+          console.error("Share failed:", shareError);
+        }
+      }
+    } else {
+      // Fallback: Normal download (works on Android, Desktop)
       const link = document.createElement("a");
       link.download = `curatedx-${handle}-${Date.now()}.png`;
       link.href = dataUrl;
       link.click();
-    } catch (err) {
-      console.error("Failed to generate image:", err);
-      alert("Failed to generate image. Please try again.");
-    } finally {
-      setGenerating(false);
     }
-  };
+  } catch (err) {
+    console.error("Failed to generate image:", err);
+    alert("Failed to generate image. Please try again.");
+  } finally {
+    setGenerating(false);
+  }
+};
 
   return (
     <>
@@ -207,12 +238,12 @@ export default function ShareModal({
           {/* Download Button */}
           <div className="p-5 sticky bottom-0 bg-zinc-950 border-t border-zinc-800">
             <button
-              onClick={handleDownload}
-              disabled={generating}
-              className="w-full rounded-xl bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-black font-bold py-4 text-sm uppercase tracking-widest transition-colors"
-            >
-              {generating ? "Generating..." : "⬇ Download Image"}
-            </button>
+  onClick={handleDownload}
+  disabled={generating}
+  className="w-full rounded-xl bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-black font-bold py-4 text-sm uppercase tracking-widest transition-colors"
+>
+  {generating ? "Generating..." : isIOS() ? "📤 Share Image" : "⬇ Download Image"}
+</button>
           </div>
         </div>
       </div>
