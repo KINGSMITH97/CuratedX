@@ -3,6 +3,13 @@
 import { useState } from "react";
 import ShareModal from "./ShareModal";
 
+function getInitial(name: string): string {
+  if (!name) return "?";
+  // Use Array.from to properly handle emojis and unicode
+  const chars = Array.from(name.trim());
+  return chars[0]?.toUpperCase() || "?";
+}
+
 interface TweetCardProps {
   authorName: string;
   handle: string;
@@ -38,9 +45,9 @@ export default function TweetCard({ authorName, handle, content, url, category }
         {/* HEADER */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-full bg-amber-400/20 flex items-center justify-center text-amber-400 text-xs font-bold border border-amber-400/20">
-              {authorName[0]}
-            </div>
+           <div className="h-8 w-8 rounded-full bg-amber-400/20 flex items-center justify-center text-amber-400 text-xs font-bold border border-amber-400/20">
+  {getInitial(authorName)}
+</div>
             <div>
               <div className="text-sm font-semibold text-zinc-100 leading-none">{authorName}</div>
               <div className="text-[10px] text-zinc-500 mt-1">@{handle}</div>

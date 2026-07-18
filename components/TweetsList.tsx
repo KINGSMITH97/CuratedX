@@ -30,22 +30,29 @@ export default function TweetsList({ initialTweets, hasMore: initialHasMore }: T
   });
 
   const loadMore = async () => {
-    setLoading(true);
-    const nextPage = page + 1;
+  setLoading(true);
+  const nextPage = page + 1;
 
-    try {
-      const res = await fetch(`/api/tweets?page=${nextPage}`);
-      const data = await res.json();
+  console.log("🔍 Fetching page:", nextPage);
 
-      setTweets((prev) => [...prev, ...data.tweets]);
-      setPage(nextPage);
-      setHasMore(data.hasMore);
-    } catch (error) {
-      console.error("Failed to load more tweets:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  try {
+    const res = await fetch(`/api/tweets?page=${nextPage}`);
+    const data = await res.json();
+
+    console.log("📦 Response from API:", data);
+    console.log("📊 Current tweets count:", tweets.length);
+    console.log("➕ New tweets to add:", data.tweets?.length);
+    console.log("🔚 Has more?", data.hasMore);
+
+    setTweets((prev) => [...prev, ...data.tweets]);
+    setPage(nextPage);
+    setHasMore(data.hasMore);
+  } catch (error) {
+    console.error("❌ Failed to load more tweets:", error);
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <>
