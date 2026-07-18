@@ -1,34 +1,26 @@
 import TweetCard from "@/components/TweetCard";
+import { supabase } from "@/lib/supabase";
+import { Tweet } from "@/lib/types";
 
-// THIS IS OUR MOCK DATA (Our temporary database)
-const MOCK_TWEETS = [
-  {
-    id: 1,
-    authorName: "Naval",
-    handle: "naval",
-    category: "Mindset",
-    content: "Productivity is for the middle-class. High-output individuals focus on leverage, judgment, and accountability.",
-    url: "https://x.com/naval"
-  },
-  {
-    id: 2,
-    authorName: "Alex Hormozi",
-    handle: "AlexHormozi",
-    category: "Business",
-    content: "You don’t become confident by shouting affirmations in the mirror. You become confident by having a stack of undeniable proof that you are who you say you are. Outwork your self-doubt.",
-    url: "https://x.com/AlexHormozi"
-  },
-  {
-    id: 3,
-    authorName: "Paul Graham",
-    handle: "paulg",
-    category: "Tech",
-    content: "It’s better to have 100 people who love you than 1 million people who sort of like you. Build deep, not wide.",
-    url: "https://x.com/paulg"
+// Fetch tweets from Supabase
+async function getTweets(): Promise<Tweet[]> {
+  const { data, error } = await supabase
+    .from("tweets")
+    .select("*")
+    .eq("is_published", true)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Error fetching tweets:", error);
+    return [];
   }
-];
 
-export default function Home() {
+  return data || [];
+}
+
+export default async function Home() {
+  const tweets = await getTweets();
+
   return (
     <main className="min-h-dvh px-4 py-6">
       <div className="mx-auto w-full max-w-md">
@@ -72,18 +64,24 @@ export default function Home() {
             <div className="h-[1px] flex-1 bg-zinc-900 ml-4"></div>
           </div>
 
-          <div className="space-y-6">
-            {MOCK_TWEETS.map((tweet) => (
-              <TweetCard 
-                key={tweet.id}
-                authorName={tweet.authorName}
-                handle={tweet.handle}
-                content={tweet.content}
-                url={tweet.url}
-                category={tweet.category}
-              />
-            ))}
-          </div>
+          {tweets.length === 0 ? (
+            <div className="text-center py-12 text-zinc-500 text-sm">
+              No tweets yet. Add some from the admin panel!
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {tweets.map((tweet) => (
+                <TweetCard 
+                  key={tweet.id}
+                  authorName={tweet.author_name}
+                  handle={tweet.author_handle}
+                  content={tweet.content}
+                  url={tweet.tweet_url}
+                  category={tweet.category}
+                />
+              ))}
+            </div>
+          )}
         </section>
 
         {/* FOOTER */}
