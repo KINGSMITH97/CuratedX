@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import TweetCard from "./TweetCard";
 import TweetSkeleton from "./TweetSkeleton";
 import { Tweet } from "@/lib/types";
@@ -17,7 +18,6 @@ export default function TweetsList({ initialTweets, hasMore: initialHasMore }: T
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Filter tweets based on search
   const filteredTweets = tweets.filter((tweet) => {
     const query = searchQuery.toLowerCase().trim();
     if (!query) return true;
@@ -80,28 +80,34 @@ export default function TweetsList({ initialTweets, hasMore: initialHasMore }: T
         </div>
 
         {filteredTweets.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="text-4xl mb-3">🔍</div>
-            <p className="text-zinc-500 text-sm">
-              {searchQuery 
-                ? `No tweets found for "${searchQuery}"` 
-                : "No tweets yet. Add some from the admin panel!"}
-            </p>
-          </div>
+          <EmptyState searchQuery={searchQuery} />
         ) : (
           <div className="space-y-6">
-            {filteredTweets.map((tweet) => (
-              <TweetCard 
-                key={tweet.id}
-                authorName={tweet.author_name}
-                handle={tweet.author_handle}
-                content={tweet.content}
-                url={tweet.tweet_url}
-                category={tweet.category}
-              />
-            ))}
+            <AnimatePresence mode="popLayout">
+              {filteredTweets.map((tweet, index) => (
+                <motion.div
+                  key={tweet.id}
+                  layout
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{
+                    duration: 0.4,
+                    delay: index < 6 ? index * 0.08 : 0,
+                    ease: "easeOut",
+                  }}
+                >
+                  <TweetCard 
+                    authorName={tweet.author_name}
+                    handle={tweet.author_handle}
+                    content={tweet.content}
+                    url={tweet.tweet_url}
+                    category={tweet.category}
+                  />
+                </motion.div>
+              ))}
+            </AnimatePresence>
 
-            {/* Loading skeletons when fetching more */}
             {loading && (
               <>
                 <TweetSkeleton />
@@ -111,19 +117,21 @@ export default function TweetsList({ initialTweets, hasMore: initialHasMore }: T
           </div>
         )}
 
-        {/* LOAD MORE BUTTON */}
         {!searchQuery && hasMore && !loading && (
-          <div className="mt-8 text-center">
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="mt-8 text-center"
+          >
             <button
               onClick={loadMore}
-              className="rounded-xl border border-amber-400 text-amber-400 hover:bg-amber-400 hover:text-black font-bold py-3 px-8 text-xs uppercase tracking-widest transition-colors"
+              className="rounded-xl border border-amber-400 text-amber-400 hover:bg-amber-400 hover:text-black font-bold py-3 px-8 text-xs uppercase tracking-widest transition-all hover:scale-105"
             >
               Load More Gems
             </button>
-          </div>
+          </motion.div>
         )}
 
-        {/* End of list message */}
         {!searchQuery && !hasMore && tweets.length > 6 && (
           <div className="mt-8 text-center text-zinc-600 text-xs uppercase tracking-widest">
             ✨ You&apos;ve seen all the gems ✨
@@ -131,5 +139,53 @@ export default function TweetsList({ initialTweets, hasMore: initialHasMore }: T
         )}
       </section>
     </>
+  );
+}
+
+// 🎨 Better Empty State Component
+function EmptyState({ searchQuery }: { searchQuery: string }) {
+  if (searchQuery) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.3 }}
+        className="text-center py-16 px-6 rounded-2xl border border-zinc-800 bg-zinc-900/20"
+      >
+        <div className="text-6xl mb-4">🔍</div>
+        <h3 className="text-lg font-bold text-zinc-200 mb-2">
+          No gems found
+        </h3>
+        <p className="text-sm text-zinc-500 mb-1">
+          Nothing matches &ldquo;<span className="text-amber-400">{searchQuery}</span>&rdquo;
+        </p>
+        <p className="text-xs text-zinc-600 mt-3">
+          Try a different keyword or category
+        </p>
+      </motion.div>
+    );
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.3 }}
+      className="text-center py-16 px-6 rounded-2xl border border-zinc-800 bg-zinc-900/20"
+    >
+      <div className="text-6xl mb-4">🥇</div>
+      <h3 className="text-lg font-bold text-zinc-200 mb-2">
+        No gems yet
+      </h3>
+      <p className="text-sm text-zinc-500 mb-6">
+        The library is empty. Start curating goldmine tweets!
+      </p>
+      <a
+        href="/admin"
+        className="inline-block rounded-xl bg-amber-400 hover:bg-amber-300 text-black font-bold py-3 px-6 text-xs uppercase tracking-widest transition-colors"
+      >
+        Add First Tweet →
+      </a>
+    </motion.div>
   );
 }
