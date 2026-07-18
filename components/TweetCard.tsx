@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 interface TweetCardProps {
   authorName: string;
   handle: string;
@@ -9,8 +11,31 @@ interface TweetCardProps {
 }
 
 export default function TweetCard({ authorName, handle, content, url, category }: TweetCardProps) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    const textToCopy = `"${content}"\n\n— @${handle}\n\n${url}`;
+    
+    try {
+      await navigator.clipboard.writeText(textToCopy);
+      setCopied(true);
+      
+      // Reset after 2 seconds
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy:", err);
+    }
+  };
+
+  const handleWhatsAppShare = () => {
+    const text = `"${content}"\n\n— @${handle}\n\nSource: ${url}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+  };
+
   return (
     <article className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-5 hover:border-amber-400/30 transition-all">
+      
+      {/* HEADER: Author + Category */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="h-8 w-8 rounded-full bg-amber-400/20 flex items-center justify-center text-amber-400 text-xs font-bold border border-amber-400/20">
@@ -26,11 +51,15 @@ export default function TweetCard({ authorName, handle, content, url, category }
         </span>
       </div>
 
-      <p className="mt-4 text-sm leading-relaxed text-zinc-200">
+      {/* TWEET CONTENT */}
+      <p className="mt-4 text-sm leading-relaxed text-zinc-200 whitespace-pre-line">
         {content}
       </p>
 
-      <div className="mt-5 flex items-center gap-4 border-t border-zinc-800/50 pt-4">
+      {/* ACTIONS */}
+      <div className="mt-5 flex items-center gap-4 border-t border-zinc-800/50 pt-4 flex-wrap">
+        
+        {/* View on X */}
         <a
           href={url}
           target="_blank"
@@ -40,12 +69,24 @@ export default function TweetCard({ authorName, handle, content, url, category }
           VIEW ON X →
         </a>
 
+        {/* Share WhatsApp */}
         <button
           type="button"
-          className="text-zinc-500 hover:text-emerald-400 text-xs font-bold transition-colors flex items-center gap-1"
-          onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(content + "\n\nSource: " + url)}`, '_blank')}
+          onClick={handleWhatsAppShare}
+          className="text-zinc-500 hover:text-emerald-400 text-xs font-bold transition-colors"
         >
-          SHARE WHATSAPP
+          WHATSAPP
+        </button>
+
+        {/* Copy to Clipboard */}
+        <button
+          type="button"
+          onClick={handleCopy}
+          className={`text-xs font-bold transition-colors ${
+            copied ? "text-emerald-400" : "text-zinc-500 hover:text-amber-400"
+          }`}
+        >
+          {copied ? "✓ COPIED" : "COPY"}
         </button>
       </div>
     </article>
