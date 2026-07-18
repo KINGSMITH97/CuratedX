@@ -2,27 +2,33 @@ import TweetsList from "@/components/TweetsList";
 import { supabase } from "@/lib/supabase";
 import { Tweet } from "@/lib/types";
 
-// Force fresh data on every request
 export const revalidate = 0;
 
-// Fetch tweets from Supabase
-async function getTweets(): Promise<Tweet[]> {
-  const { data, error } = await supabase
+const INITIAL_PAGE_SIZE = 6;
+
+async function getInitialTweets(): Promise<{ tweets: Tweet[]; hasMore: boolean }> {
+  const { data, error, count } = await supabase
     .from("tweets")
-    .select("*")
+    .select("*", { count: "exact" })
     .eq("is_published", true)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .range(0, INITIAL_PAGE_SIZE - 1);
 
   if (error) {
     console.error("Error fetching tweets:", error);
-    return [];
+    return { tweets: [], hasMore: false };
   }
 
-  return data || [];
+  const hasMore = count ? count > INITIAL_PAGE_SIZE : false;
+
+  return {
+    tweets: data || [],
+    hasMore,
+  };
 }
 
 export default async function Home() {
-  const tweets = await getTweets();
+  const { tweets, hasMore } = await getInitialTweets();
 
   return (
     <main className="min-h-dvh px-4 py-6">
@@ -52,8 +58,8 @@ export default async function Home() {
           </p>
         </section>
 
-        {/* TWEETS LIST WITH SEARCH */}
-        <TweetsList tweets={tweets} />
+        {/* TWEETS LIST WITH SEARCH + LOAD MORE */}
+        <TweetsList initialTweets={tweets} hasMore={hasMore} />
 
         {/* FOOTER */}
         <footer className="mt-20 border-t border-zinc-900 pt-10 pb-10 text-center">

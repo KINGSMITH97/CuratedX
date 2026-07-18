@@ -2,21 +2,25 @@
 
 import { useState } from "react";
 import TweetCard from "./TweetCard";
+import TweetSkeleton from "./TweetSkeleton";
 import { Tweet } from "@/lib/types";
 
 interface TweetsListProps {
-  tweets: Tweet[];
+  initialTweets: Tweet[];
+  hasMore: boolean;
 }
 
-export default function TweetsList({ tweets }: TweetsListProps) {
+export default function TweetsList({ initialTweets, hasMore: initialHasMore }: TweetsListProps) {
+  const [tweets, setTweets] = useState<Tweet[]>(initialTweets);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(initialHasMore);
+  const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Filter tweets based on search query
+  // Filter tweets based on search
   const filteredTweets = tweets.filter((tweet) => {
     const query = searchQuery.toLowerCase().trim();
-    
-    if (!query) return true; // No search = show all
-    
+    if (!query) return true;
     return (
       tweet.content.toLowerCase().includes(query) ||
       tweet.author_name.toLowerCase().includes(query) ||
@@ -24,6 +28,24 @@ export default function TweetsList({ tweets }: TweetsListProps) {
       tweet.category.toLowerCase().includes(query)
     );
   });
+
+  const loadMore = async () => {
+    setLoading(true);
+    const nextPage = page + 1;
+
+    try {
+      const res = await fetch(`/api/tweets?page=${nextPage}`);
+      const data = await res.json();
+
+      setTweets((prev) => [...prev, ...data.tweets]);
+      setPage(nextPage);
+      setHasMore(data.hasMore);
+    } catch (error) {
+      console.error("Failed to load more tweets:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <>
@@ -48,7 +70,7 @@ export default function TweetsList({ tweets }: TweetsListProps) {
         )}
       </div>
 
-      {/* LATEST GEMS LIST */}
+      {/* TWEETS LIST */}
       <section className="mt-12">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xs font-black text-zinc-500 uppercase tracking-[0.2em]">
@@ -78,6 +100,33 @@ export default function TweetsList({ tweets }: TweetsListProps) {
                 category={tweet.category}
               />
             ))}
+
+            {/* Loading skeletons when fetching more */}
+            {loading && (
+              <>
+                <TweetSkeleton />
+                <TweetSkeleton />
+              </>
+            )}
+          </div>
+        )}
+
+        {/* LOAD MORE BUTTON */}
+        {!searchQuery && hasMore && !loading && (
+          <div className="mt-8 text-center">
+            <button
+              onClick={loadMore}
+              className="rounded-xl border border-amber-400 text-amber-400 hover:bg-amber-400 hover:text-black font-bold py-3 px-8 text-xs uppercase tracking-widest transition-colors"
+            >
+              Load More Gems
+            </button>
+          </div>
+        )}
+
+        {/* End of list message */}
+        {!searchQuery && !hasMore && tweets.length > 6 && (
+          <div className="mt-8 text-center text-zinc-600 text-xs uppercase tracking-widest">
+            ✨ You&apos;ve seen all the gems ✨
           </div>
         )}
       </section>
